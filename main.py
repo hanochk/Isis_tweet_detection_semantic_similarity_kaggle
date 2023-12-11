@@ -15,16 +15,18 @@ import torch
 import tqdm
 # np.seterr(all='raise')
 from sentence_transformers import SentenceTransformer
-
+from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 import pandas as pd
 import emoji
 # from abbrev_dict import *
 # from eval_metrices import roc_plot, p_r_plot
+# from data import *
 def flatten(lst):
     return [x for l in lst for x in l]
 
-def cosine_sim(x,y):
-    return np.dot(x,y) / (np.linalg.norm(x)*np.linalg.norm(y))
+def cosine_sim(x, y):
+    return np.dot(x, y) / (np.linalg.norm(x)*np.linalg.norm(y))
 
 class SimilarityManager:
     def __init__(self):
@@ -67,29 +69,29 @@ def embeddings_extract(sentence: list, key_tag:str , result_dir: str, evaluator)
     else:
         pad = 0
 
-    all_embeds_dialog = list()
+    all_embeds = list()
     bns = len(sentence)//batch_size
 
     for idx in np.arange(bns):
         batch_sent = sentence[idx * batch_size: (idx + 1) * batch_size]
         batch_sent = [re.sub('\r\n', '', dialog) for dialog in batch_sent] # TODO HK@@
         embs = evaluator.encode_tokens(batch_sent)
-        all_embeds_dialog.append(embs)
+        all_embeds.append(embs)
 
         if idx % 10 == 0:
             with open(os.path.join(result_dir, str(key_tag) + '.pkl'), 'wb') as f:
-                pickle.dump(all_embeds_dialog, f)
+                pickle.dump(all_embeds, f)
     if pad != 0:
         batch_sent = sentence[batch_size * (len(sentence)//batch_size): len(sentence)]
         embs = evaluator.encode_tokens(batch_sent)
-        all_embeds_dialog.append(embs)
+        all_embeds.append(embs)
 
-    all_embeds_dialog = np.concatenate(all_embeds_dialog)
+    all_embeds = np.concatenate(all_embeds)
 
     with open(os.path.join(result_dir, str(key_tag) + '.pkl'), 'wb') as f:
-        pickle.dump(all_embeds_dialog, f)
+        pickle.dump(all_embeds, f)
 
-    return all_embeds_dialog
+    return all_embeds
 
 def deEmojify(text):
     regrex_pattern = re.compile(pattern = "["
@@ -103,45 +105,102 @@ def deEmojify(text):
 
 def main():
     evaluator = VGEvaluation()
-
     local_dir = r'C:\Users\h00633314\HanochWorkSpace\Projects\Isis_tweet_detection'
     bin_dir = os.path.join(local_dir, 'bin')
     if not os.path.exists(bin_dir):
         os.makedirs(bin_dir)
 
+    pre_compute_embeddings = False
+
     data_dir = os.path.join(local_dir, 'data')
-    df_pos = pd.read_excel(os.path.join(data_dir, 'tweets_isis_all.xlsx'))
 
+    df_neg, df_pos = load_preprocess_csv_data(data_dir)
 
-    df_pos['tweet_post_proc'] = df_pos.apply(
-        lambda x: re.sub('\n', ' ', x['tweets']), axis=1)
-
-    df_pos['tweet_post_proc'] = df_pos['tweet_post_proc'].apply(
-        lambda x: re.sub('\n', ' ', deEmojify(x)))
-
-
-    df_neg = pd.read_excel(os.path.join(data_dir, 'tweets_random_all.xlsx'))
-    df_neg['tweet_merged'] = df_neg.apply(
-        lambda x: (str(x['content']) + str(x['Unnamed: 2'])).replace("\\", "").replace("\'", " "), axis=1)
-
-    pre_compute_embeddings = True
     # evaluator.encode_tokens
     if pre_compute_embeddings:
         print("precompute embeddings saved to pickles")
 
-        all_embeds_dialog = evaluator.encode_tokens(df_pos['tweets'].to_list())
+        all_embeds = evaluator.encode_tokens(df_pos['tweet_post_proc'].to_list())
 
         key_tag = 'isis_pos_embed'
         with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'wb') as f:
-            pickle.dump(all_embeds_dialog, f)
+            pickle.dump(all_embeds, f)
 
+        all_embeds = evaluator.encode_tokens(df_neg['tweet_post_proc'].to_list())
 
-    # all_embds_chunks = embeddings_extract(chunk_list,
-    #                                       key_tag=key_tag_chunk,
-    #                                       result_dir=result_dir,
-    #                                       evaluator=evaluator)
+        key_tag = 'rand_neg_embed'
+        with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'wb') as f:
+            pickle.dump(all_embeds, f)
+    else:
+        key_tag = 'isis_pos_embed'
+        with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'rb') as f:
+            all_embeds_pos = pickle.load(f)
 
+        key_tag = 'rand_neg_embed'
+        with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'rb') as f:
+            all_embeds_neg = pickle.load(f)
+    # [len(df_pos[df_pos.username==x]) for x in np.unique(df_pos.username)]  between 1-1580 tweets per username
+    test_train_ratio = 10
+    # Stratification by username over the positives , negatives doesn't have that info
+    len(df_pos) // test_train_ratio
+    pos_inx_users_for_test_set_indices = np.where(np.cumsum([len(df_pos[df_pos.username==x]) for x in np.unique(df_pos.username)]) <len(df_pos) // test_train_ratio)
+    pos_inx_users_for_trainval_set_indices = np.where(np.cumsum([len(df_pos[df_pos.username==x]) for x in np.unique(df_pos.username)]) >len(df_pos) // test_train_ratio)
+
+    pos_users_for_test_set_indices = np.unique(df_pos.username)[pos_inx_users_for_test_set_indices]
+    pos_users_for_trainval_set_indices = np.unique(df_pos.username)[pos_inx_users_for_trainval_set_indices]
+
+    assert (pos_inx_users_for_test_set_indices[0].shape[0] + pos_inx_users_for_trainval_set_indices[0].shape[
+        0] == np.unique(df_pos.username).size)
+
+    df_pos_test = pd.DataFrame()
+    for x in pos_users_for_test_set_indices:
+        df_pos_test = pd.concat([df_pos_test, df_pos[df_pos['username'] == x]])
+
+    df_pos_trainval = pd.DataFrame()
+    for x in pos_users_for_trainval_set_indices:
+        df_pos_trainval = pd.concat([df_pos_trainval, df_pos[df_pos['username'] == x]])
+
+    assert (len(df_pos_trainval) + len(df_pos_test) == len(df_pos))
+
+    skf = StratifiedKFold(n_splits=5)
+    target = df_pos_trainval.loc[:, 'username']
+    skf_gen = skf.split(df_pos_trainval, target)
+
+    df_neg_test = df_neg[-len(df_neg)//test_train_ratio +1 :]
+    df_neg_train = df_neg[:-len(df_neg)//10 +1]
+
+    kf = KFold(n_splits=5, shuffle=True, random_state=2)
+    for train_index, val_index in kf.split(df_neg_train):
+        df_neg_train_fold, df_neg_test_fold = df_neg_train.iloc[train_index, :], df_neg_train.iloc[val_index, :]
+        pos_indexes = next(skf_gen)
+    df_all = pd.concat([df_pos, df_neg])
+    # prepare_dataloaders(all_embeds_pos, all_embeds_neg, df_pos, df_neg)
     pass
+
+
+def load_preprocess_csv_data(data_dir: str):
+    df_pos = pd.read_excel(os.path.join(data_dir, 'tweets_isis_all.xlsx'))
+    df_pos['tweet_post_proc'] = df_pos.apply(
+        lambda x: re.sub('\n', ' ', x['tweets']), axis=1)
+    df_pos['tweet_post_proc'] = df_pos['tweet_post_proc'].apply(
+        lambda x: re.sub('\n', ' ', deEmojify(x)))
+    df_pos['tweet_post_proc'] = df_pos['tweet_post_proc'].apply(
+        lambda x: x.strip())
+    df_neg = pd.read_excel(os.path.join(data_dir, 'tweets_random_all.xlsx'))
+    df_neg['tweet_post_proc'] = df_neg.apply(
+        lambda x: (str(x['content']) + str(x['Unnamed: 2'])).replace("\\", "").replace("\'", " ").strip(), axis=1)
+    df_neg['tweet_post_proc'] = df_neg['tweet_post_proc'].apply(
+        lambda x: re.sub('\n', ' ', deEmojify(x)))
+    return df_neg, df_pos
+
 
 if __name__ == '__main__':
     main()
+
+
+"""
+df_pos['tweet_post_proc'][149] = 'hīs'
+df_pos['tweet_post_proc'][428-2] = 'A B'  
+if len(df_pos['tweet_post_proc'][149]) <=3 remove tweet!!!
+[print(x) for ix, x in enumerate(df_neg['tweet_post_proc']) if ix <30] 
+"""
