@@ -20,17 +20,19 @@ def to_device(tensor_or_list, device):
     return tensor_or_list
 
 class DataSet(Dataset):
-    def __init__(self, emb_pos, emb_neg, is_train, **kwargs):
+    def __init__(self, df_pos_fold, all_embeds_pos, df_neg_fold, all_embeds_neg, is_train: bool=False, **kwargs):
         super(Dataset, self).__init__()
-
-        self.emb = np.concatenate(emb_pos, emb_neg)
-        self.labels = np.concatenate([np.ones((1, emb_pos.size)), np.zeros((1, emb_neg.size))]).astype(np.float32)
-
+        # all_embeds_pos['index']
+        self.embs = np.concatenate([all_embeds_pos[df_pos_fold['index'], :], all_embeds_neg[df_neg_fold['index'], :]])
+        self.labels = np.concatenate([np.ones((1, df_pos_fold['index'].shape[0])),
+                                      np.zeros((1, df_neg_fold['index'].shape[0]))], axis=1).astype(np.float32)
+        self.labels = self.labels.reshape(-1)
         self.train_dataset = is_train
 
-        if is_train:
+        if self.train_dataset:
             self.sampler = self._minority_database_oversampling()
-        self.sampler = None
+        else:
+            self.sampler = None
 
         return
 
@@ -38,11 +40,11 @@ class DataSet(Dataset):
         return self.labels.size
 
     def __getitem__(self, idx: int):
-        return self.emb[idx, :], self.labels[idx]
+        return self.embs[idx, :], self.labels[idx]
 
     def _minority_database_oversampling(self):
-        cls_id = np.zeros(len(self.imagenames)).astype(int)
-        cls_id[self.labels==1] = 1
+        cls_id = np.zeros(self.labels.size).astype(int)
+        cls_id[self.labels.reshape(-1)==1] = 1
         class_sample_count = np.array([len(np.where(cls_id == t)[0]) for t in np.unique(cls_id)])
         weight = 1. / class_sample_count
         samples_weight = np.array([weight[t] for t in cls_id])
@@ -55,9 +57,10 @@ class DataSet(Dataset):
         return sampler
 
 
-def prepare_dataloaders(batch_size: int=32, num_workers: int=10,
-                        train_by_all_data: bool=False):
-
+# def prepare_dataloaders(df_pos_train_fold, df_neg_train_fold, all_embeds_pos, all_embeds_neg,
+#                         batch_size: int=32, num_workers: int=10,
+#                         train_by_all_data: bool=False):
+#
     # train_df = dataframe.loc[dataframe['train_or_test'] == 'train']
     # test_df = dataframe.loc[dataframe['train_or_test'] == 'test']
     # val_df = train_df[train_df['val'] == 1]
@@ -81,19 +84,19 @@ def prepare_dataloaders(batch_size: int=32, num_workers: int=10,
     #
     # val_image_text = [x.split('/')[-2] for x in val_image_fname]
 
-    train_dataset = DataSet(img_preprocess=img_preprocess, tokenizer=tokenizer,
-                         image_path=train_image_fname, text_list=train_image_text, classifier_uniq_cls=True)
-
-    val_dataset = DataSet(img_preprocess=img_preprocess, tokenizer=tokenizer,
-                       image_path=val_image_fname, text_list=val_image_text, classifier_uniq_cls=True)
-
-    train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size,
-                                                   shuffle=True,
-                                                   num_workers=num_workers,
-                                                   sampler=train_dataset.sampler)
-
-    val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=batch_size,
-                                                 shuffle=False,
-                                                 num_workers=num_workers,)
-
-    return train_dataloader, val_dataloader
+    # train_dataset = DataSet(df_pos_train_fold=df_pos_train_fold, all_embeds_pos=all_embeds_pos,
+    #                         df_neg_train_fold=df_neg_train_fold, all_embeds_pos=all_embeds_neg)
+    #
+    # val_dataset = DataSet(img_preprocess=img_preprocess, tokenizer=tokenizer,
+    #                    image_path=val_image_fname, text_list=val_image_text, classifier_uniq_cls=True)
+    #
+    # train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size,
+    #                                                shuffle=train_dataset.isShuffle,
+    #                                                num_workers=num_workers,
+    #                                                sampler=train_dataset.sampler)
+    #
+    # val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=batch_size,
+    #                                              shuffle=False,
+    #                                              num_workers=num_workers,)
+    #
+    # return train_dataloader, val_dataloader

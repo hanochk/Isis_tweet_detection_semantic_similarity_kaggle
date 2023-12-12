@@ -21,7 +21,9 @@ import pandas as pd
 import emoji
 # from abbrev_dict import *
 # from eval_metrices import roc_plot, p_r_plot
-# from data import *
+from data import *
+from models import *
+from train_eval import *
 def flatten(lst):
     return [x for l in lst for x in l]
 
@@ -29,16 +31,15 @@ def cosine_sim(x, y):
     return np.dot(x, y) / (np.linalg.norm(x)*np.linalg.norm(y))
 
 class SimilarityManager:
-    def __init__(self):
+    def __init__(self, device):
         # self.similarity_model = SentenceTransformer('sentence-transformers/paraphrase-xlm-r-multilingual-v1')
         self.similarity_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-        if torch.cuda.device_count() > 0:
-            self.similarity_model.cuda()
+        self.similarity_model.to(device)
 
 class VGEvaluation:
-    def __init__(self):
-        self.smanager = SimilarityManager()
+    def __init__(self, device):
+        self.smanager = SimilarityManager(device)
 
     def encode_tokens (self, t1: list, batch_size=16, show_progress_bar=True):
         embs = self.smanager.similarity_model.encode([t.lower() for t in t1],
@@ -104,11 +105,21 @@ def deEmojify(text):
 
 
 def main():
-    evaluator = VGEvaluation()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    batch_size = 16
+    num_workers = 4
+
+    evaluator = VGEvaluation(device)
     local_dir = r'C:\Users\h00633314\HanochWorkSpace\Projects\Isis_tweet_detection'
     bin_dir = os.path.join(local_dir, 'bin')
     if not os.path.exists(bin_dir):
         os.makedirs(bin_dir)
+
+    # Model
+    embeddings = evaluator.smanager.similarity_model.encode("This is an example sentence")
+    model = Mlp(in_features=embeddings.shape[0], out_features=2, drop=0)
+    model.to(device)
+
 
     pre_compute_embeddings = False
 
@@ -139,6 +150,13 @@ def main():
         key_tag = 'rand_neg_embed'
         with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'rb') as f:
             all_embeds_neg = pickle.load(f)
+
+    # Optimizer
+    loss = nn.CrossEntropyLoss()
+    optimizer = optim.AdamW(model.parameters(), lr=1e-5,
+                            betas=(0.9, 0.98), eps=1e-6,
+                            weight_decay=0.0001) # the lr is smaller, more safe for fine tuning to new dataset
+
     # [len(df_pos[df_pos.username==x]) for x in np.unique(df_pos.username)]  between 1-1580 tweets per username
     test_train_ratio = 10
     # Stratification by username over the positives , negatives doesn't have that info
@@ -171,10 +189,32 @@ def main():
 
     kf = KFold(n_splits=5, shuffle=True, random_state=2)
     for train_index, val_index in kf.split(df_neg_train):
-        df_neg_train_fold, df_neg_test_fold = df_neg_train.iloc[train_index, :], df_neg_train.iloc[val_index, :]
+        df_neg_train_fold, df_neg_val_fold = df_neg_train.iloc[train_index, :], df_neg_train.iloc[val_index, :]
         pos_indexes = next(skf_gen)
-    df_all = pd.concat([df_pos, df_neg])
-    # prepare_dataloaders(all_embeds_pos, all_embeds_neg, df_pos, df_neg)
+        (train_pos_index, val_pos_index) = pos_indexes
+        df_pos_train_fold, df_pos_val_fold = df_pos_trainval.iloc[train_pos_index, :], df_pos_trainval.iloc[val_pos_index, :]
+
+        train_dataset = DataSet(df_pos_fold=df_pos_train_fold, all_embeds_pos=all_embeds_pos,
+                                df_neg_fold=df_neg_train_fold, all_embeds_neg=all_embeds_neg, is_train=True)
+
+        val_dataset = DataSet(df_pos_fold=df_pos_val_fold, all_embeds_pos=all_embeds_pos,
+                                df_neg_fold=df_neg_train_fold, all_embeds_neg=all_embeds_neg)
+
+
+        train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size,
+                                                       shuffle=False,
+                                                       num_workers=num_workers,
+                                                       sampler=train_dataset.sampler)
+
+        val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=batch_size,
+                                                     shuffle=False,
+                                                     num_workers=num_workers)
+
+        all_targets, all_predictions = train_model(model, train_dataloader,
+                                                   loss_img=loss, optimizer=optimizer, device=device)
+
+        # prepare_dataloaders(df_pos_train_fold, df_neg_train_fold, df_pos_val_fold,
+        #                     df_neg_val_fold,all_embeds_pos, all_embeds_neg)
     pass
 
 
@@ -191,6 +231,10 @@ def load_preprocess_csv_data(data_dir: str):
         lambda x: (str(x['content']) + str(x['Unnamed: 2'])).replace("\\", "").replace("\'", " ").strip(), axis=1)
     df_neg['tweet_post_proc'] = df_neg['tweet_post_proc'].apply(
         lambda x: re.sub('\n', ' ', deEmojify(x)))
+
+    df_neg['index'] = range(0, len(df_neg))
+    df_pos['index'] = range(0, len(df_pos))
+
     return df_neg, df_pos
 
 
@@ -202,5 +246,7 @@ if __name__ == '__main__':
 df_pos['tweet_post_proc'][149] = 'hīs'
 df_pos['tweet_post_proc'][428-2] = 'A B'  
 if len(df_pos['tweet_post_proc'][149]) <=3 remove tweet!!!
-[print(x) for ix, x in enumerate(df_neg['tweet_post_proc']) if ix <30] 
+[print(x) for ix, x in enumerate(df_neg['tweet_post_proc']) if ix <30]
+
+# TODO:  tSNE 
 """
