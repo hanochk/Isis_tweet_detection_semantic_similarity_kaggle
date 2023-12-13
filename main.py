@@ -24,6 +24,7 @@ import emoji
 from data import *
 from models import *
 from train_eval import *
+from eval_metrices import p_r_plot
 def flatten(lst):
     return [x for l in lst for x in l]
 
@@ -114,6 +115,7 @@ def main():
     bin_dir = os.path.join(local_dir, 'bin')
     if not os.path.exists(bin_dir):
         os.makedirs(bin_dir)
+    result_dir = os.path.join(local_dir, 'results')
 
     # Model
     embeddings = evaluator.smanager.similarity_model.encode("This is an example sentence")
@@ -142,6 +144,7 @@ def main():
         key_tag = 'rand_neg_embed'
         with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'wb') as f:
             pickle.dump(all_embeds, f)
+        return
     else:
         key_tag = 'isis_pos_embed'
         with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'rb') as f:
@@ -210,11 +213,15 @@ def main():
                                                      shuffle=False,
                                                      num_workers=num_workers)
 
-        all_targets, all_predictions = train_model(model, train_dataloader,
-                                                   loss_img=loss, optimizer=optimizer, device=device)
+        all_targets, all_predictions, all_total_loss = train_model(model, train_dataloader,
+                                                   criterion=loss, optimizer=optimizer, device=device, num_epochs=4)
 
-        # prepare_dataloaders(df_pos_train_fold, df_neg_train_fold, df_pos_val_fold,
-        #                     df_neg_val_fold,all_embeds_pos, all_embeds_neg)
+        all_targets, all_predictions, all_total_loss = eval_model(model, val_dataloader,
+                                                   criterion=loss, optimizer=optimizer, device=device)
+
+        p_r_plot(all_targets, all_predictions, positive_label=1, save_dir=result_dir,
+                        unique_id='Isis tweets classifier')
+
     pass
 
 
