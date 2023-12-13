@@ -28,10 +28,11 @@ def train_model(model, dataloader: DataSet, criterion, optimizer, device, num_ep
             embeds = to_device(embeds, device)
 
             outputs = model(embeds)
+            all_targets.append(labels)
 
             labels = to_device(labels, device).long()
             total_loss = criterion(outputs, labels.long())
-            all_total_loss.append(total_loss)
+            all_total_loss.append(total_loss.detach().cpu().numpy().item())
             total_loss.backward()
             optimizer.step()
 
@@ -40,11 +41,10 @@ def train_model(model, dataloader: DataSet, criterion, optimizer, device, num_ep
             predictions = torch.nn.functional.softmax(outputs, dim=1)
             all_predictions.append(predictions.detach().cpu().numpy())
             max_sim_ind = np.argmax(outputs.detach().cpu().numpy(), axis=1)
-            acc = np.where(max_sim_ind - labels.numpy() == 0)[0].shape[0] / labels.shape[0]
-            print(acc)
+            # acc = np.where(max_sim_ind - labels.numpy() == 0)[0].shape[0] / labels.shape[0]
+            # print(acc)
 
 #            all_predictions.append(max_sim_ind)
-            all_targets.append(labels)
             print("Step loss {} running_loss {}".format(total_loss.item(), running_loss))
         epoch_loss = running_loss / len(dataloader.dataset)
         print(epoch_loss)
@@ -69,14 +69,14 @@ def eval_model(model, dataloader: DataSet, criterion, device, **kwargs):
             embeds = to_device(embeds, device)
             # text is already tokenized  :text_inputs = to_device(clip.tokenize(["A photo of a {}".format(x) for x in text]), self.device) =>#
             outputs = model(embeds)
+            all_targets.append(labels)
             labels = to_device(labels, device).long()
             total_loss = criterion(outputs, labels)
 
             predictions = torch.nn.functional.softmax(outputs, dim=1)
             all_predictions.append(predictions.detach().cpu().numpy())
 
-            all_total_loss.append(total_loss)
-            all_targets.append(labels)
+            all_total_loss.append(total_loss.detach().cpu().numpy().item())
 
         all_targets = np.concatenate(all_targets)
         all_predictions = np.concatenate(all_predictions)

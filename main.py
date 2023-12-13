@@ -3,8 +3,8 @@ import sys
 import os
 from scipy.optimize import linear_sum_assignment
 import pickle
-# import matplotlib
-# matplotlib.use('TkAgg')
+import matplotlib
+matplotlib.use('TkAgg')
 # matplotlib.use('qtagg')
 import matplotlib.pyplot as plt
 import re
@@ -115,7 +115,10 @@ def main():
     bin_dir = os.path.join(local_dir, 'bin')
     if not os.path.exists(bin_dir):
         os.makedirs(bin_dir)
+
     result_dir = os.path.join(local_dir, 'results')
+    if not os.path.exists(result_dir):
+        os.makedirs(result_dir)
 
     # Model
     embeddings = evaluator.smanager.similarity_model.encode("This is an example sentence")
@@ -190,8 +193,15 @@ def main():
     df_neg_test = df_neg[-len(df_neg)//test_train_ratio +1 :]
     df_neg_train = df_neg[:-len(df_neg)//10 +1]
 
+    test_dataset = DataSet(df_pos_fold=df_pos_test, all_embeds_pos=all_embeds_pos,
+                           df_neg_fold=df_neg_test, all_embeds_neg=all_embeds_neg)
+
+    test_dataloader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size,
+                                                  shuffle=False,
+                                                  num_workers=num_workers)
+
     kf = KFold(n_splits=5, shuffle=True, random_state=2)
-    for train_index, val_index in kf.split(df_neg_train):
+    for fold_ix, (train_index, val_index) in enumerate(kf.split(df_neg_train)):
         df_neg_train_fold, df_neg_val_fold = df_neg_train.iloc[train_index, :], df_neg_train.iloc[val_index, :]
         pos_indexes = next(skf_gen)
         (train_pos_index, val_pos_index) = pos_indexes
@@ -212,15 +222,44 @@ def main():
         val_dataloader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=batch_size,
                                                      shuffle=False,
                                                      num_workers=num_workers)
+        if 0:
+            all_targets, all_predictions, val_total_loss = eval_model(model, val_dataloader,
+                                                       criterion=loss, optimizer=optimizer, device=device)
 
-        all_targets, all_predictions, all_total_loss = train_model(model, train_dataloader,
-                                                   criterion=loss, optimizer=optimizer, device=device, num_epochs=4)
+        all_val_total_loss = list()
+        all_train_total_loss = list()
+        for epochs in range(6):
+            all_targets, all_predictions, train_total_loss = train_model(model, train_dataloader,
+                                                       criterion=loss, optimizer=optimizer, device=device, num_epochs=1)
 
-        all_targets, all_predictions, all_total_loss = eval_model(model, val_dataloader,
-                                                   criterion=loss, optimizer=optimizer, device=device)
+            all_train_total_loss.extend(np.array(train_total_loss).mean())
+            # np.save(os.path.join(local_dir, 'train_loss'), all_train_total_loss, allow_pickle=True)
 
-        p_r_plot(all_targets, all_predictions, positive_label=1, save_dir=result_dir,
-                        unique_id='Isis tweets classifier')
+            all_targets_val, all_predictions_val, val_total_loss = eval_model(model, val_dataloader,
+                                                       criterion=loss, optimizer=optimizer, device=device)
+
+            all_val_total_loss.extend(np.array(val_total_loss).mean())
+            # np.save(os.path.join(local_dir, 'val_loss'), all_val_total_loss, allow_pickle=True)
+
+            plt.plot(all_train_total_loss, 'b', label='train loss')
+            plt.plot(all_val_total_loss, 'r', label='validation loss')
+            plt.title("Learning curve fold {} epochs={}".format(fold_ix, epochs))
+            plt.legend(loc="upper right")
+            plt.grid()
+            plt.savefig(
+                os.path.join(result_dir, 'learning_curve_fold_' + str(fold_ix) +'_.jpg'))
+
+        all_targets_test, all_predictions_test, test_total_loss = eval_model(model, test_dataloader,
+                                                                       criterion=loss, optimizer=optimizer,
+                                                                       device=device)
+
+        p_r_plot(all_targets_test, all_predictions_test[:, 1], positive_label=1, save_dir=result_dir,
+                        unique_id='Isis tweets classifier test-set')
+
+        p_r_plot(all_targets_val, all_predictions_val[:, 1], positive_label=1, save_dir=result_dir,
+                        unique_id='Isis tweets classifier test-set')
+
+        torch.save(model.state_dict(), os.path.join(bin_dir, 'model'))
 
     pass
 
