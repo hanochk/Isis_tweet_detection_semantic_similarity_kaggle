@@ -1,4 +1,5 @@
 from data import *
+import numpy as np
 def to_device(tensor_or_list, device):
     if isinstance(tensor_or_list, (list, tuple)):
         tensor_or_list = [tensor.to(device) for tensor in tensor_or_list]
