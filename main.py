@@ -232,32 +232,36 @@ def main():
             all_targets, all_predictions, train_total_loss = train_model(model, train_dataloader,
                                                        criterion=loss, optimizer=optimizer, device=device, num_epochs=1)
 
-            all_train_total_loss.extend(np.array(train_total_loss).mean())
+            all_train_total_loss.append(np.array(train_total_loss).mean())
             # np.save(os.path.join(local_dir, 'train_loss'), all_train_total_loss, allow_pickle=True)
 
             all_targets_val, all_predictions_val, val_total_loss = eval_model(model, val_dataloader,
                                                        criterion=loss, optimizer=optimizer, device=device)
 
-            all_val_total_loss.extend(np.array(val_total_loss).mean())
+            all_val_total_loss.append(np.array(val_total_loss).mean())
             # np.save(os.path.join(local_dir, 'val_loss'), all_val_total_loss, allow_pickle=True)
 
+            plt.figure()
             plt.plot(all_train_total_loss, 'b', label='train loss')
             plt.plot(all_val_total_loss, 'r', label='validation loss')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
             plt.title("Learning curve fold {} epochs={}".format(fold_ix, epochs))
             plt.legend(loc="upper right")
             plt.grid()
             plt.savefig(
                 os.path.join(result_dir, 'learning_curve_fold_' + str(fold_ix) +'_.jpg'))
+            plt.close('all')
 
         all_targets_test, all_predictions_test, test_total_loss = eval_model(model, test_dataloader,
                                                                        criterion=loss, optimizer=optimizer,
                                                                        device=device)
 
         p_r_plot(all_targets_test, all_predictions_test[:, 1], positive_label=1, save_dir=result_dir,
-                        unique_id='Isis tweets classifier test-set')
+                        unique_id='Isis tweets classifier test-set ')
 
         p_r_plot(all_targets_val, all_predictions_val[:, 1], positive_label=1, save_dir=result_dir,
-                        unique_id='Isis tweets classifier test-set')
+                        unique_id='Isis tweets classifier validation-set ')
 
         torch.save(model.state_dict(), os.path.join(bin_dir, 'model'))
 
