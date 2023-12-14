@@ -13,9 +13,9 @@ Dataset: https://www.kaggle.com/datasets/fifthtribe/how-isis-uses-twitter
 
 A few approaches could be considered: 
  - Probabilistic model (GMM for instance) based on the clustered embeddings representation (created by SBERT) of each tweet for each class and assessing the hypothesis that a tweet belongs to one of the probabilistic models P(t/model_isis) > P(t/model_non_isis).
- - Semantically sentence similarity-based model that creates representation in high dimension feeding a nonlinear binary classifier (MLP), based on the SBERT embeddings, for instance. SBERT can be a good candidate since it was trained contrastively to maintain similarity between sentences with “similar meaning”. Since the embeddings aren’t necessarily linearly separable in the latent space, an additional MLP-based classifier containing non-linear elements is added. 
+ - Transfer learning for downstream task of a semantically sentence similarity-based model, that creates representation in high dimension feeding a nonlinear binary classifier (MLP). That model is based on the SBERT embeddings, for instance. SBERT can be a good candidate since it was trained contrastively to maintain similarity between sentences with “similar meaning”. Since the embeddings aren’t necessarily linearly separable in the latent space, an additional MLP-based classifier containing non-linear elements is added to transfer the learning to another task. 
   - Generative-based approach and retrieval one, are also an option
-Approach No.2 was adopted here.
+Approach No.2 was adopted here since it is fully trainable using the SBERT model as a pre-trained backbone. 
 
 A textual similarity model such as SBERT (Bi-Encoder) was trained to get maximal cosine similarity for semantic similar sentences and also used for clustering purposes. 
 
