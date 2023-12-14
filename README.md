@@ -80,7 +80,7 @@ Despite the noisy tokens, the model can generalize well and the cleaning of the 
  - Validate if the existence of web links, and short tweets inside the tweets improves the KPI or not
 Further processing should be taken over abbreviations such as “w/” should be converted further to “with”
  - Examine the generalization vs. a holdout set such as tweets from later periods: a year or two after the terror attack in Paris
- - Consider Incorporating N-gram based approach or NER to gain more confidence by Identifying more frequently or names of prominent clergy:  "Anwar Awlaki", "Ahmad Jibril", "Ibn Taymiyyah", "Abdul Wahhab". Examples of clergy that they hate the most: "Hamza Yusuf", "Suhaib Webb", "Yaser Qadhi", "Nouman Ali Khan", "Yaqoubi".
+ - Though there is a chance of not generalizing to recent tweets from the same reason explained, we may consider incorporating N-gram based approach, or NER, to gain more confidence by Identifying more frequently or names of prominent clergy:  "Anwar Awlaki", "Ahmad Jibril", "Ibn Taymiyyah", "Abdul Wahhab". Examples of clergy that they hate the most: "Hamza Yusuf", "Suhaib Webb", "Yaser Qadhi", "Nouman Ali Khan", "Yaqoubi".
 
 ![learning_curve_fold_0_](https://github.com/hanochk/Isis_tweet_detection/assets/8217391/f19d44f1-8659-42cf-a46f-1d4cf270cbe4)
 
