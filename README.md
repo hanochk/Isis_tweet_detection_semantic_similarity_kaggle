@@ -65,6 +65,7 @@ Despite the noisy tokens, the model can generalize well and the cleaning of the 
 - The learning curve shows signs of near overfitting which can tell that stratification was over the right attribute, other-wise the training and validation set would have been correlated
 - 
 ***Actions to explore further given more time
+ - Determine the right threshold for the classifier, trading off precision/recall or FN/FP implicitly. We can see that the threshold is nearly the same over the validation and test set.   
  - Error analysis for understanding upon what examples the model failed to predict, extracting noisy tweets. 
  - Time precedence of the tweets wasn't examined 
  - Assess early stopping supporting implicit regularization by averaging over the folds
@@ -86,3 +87,4 @@ Further processing should be taken over abbreviations such as “w/” should be
 ![Isis tweets classifier validation-set fold 0p_r_curve](https://github.com/hanochk/Isis_tweet_detection/assets/8217391/f0441141-af1a-4c69-ac48-db7e71a96279)
 
 
+![Isis tweets classifier test-set p_r_curve](https://github.com/hanochk/Isis_tweet_detection/assets/8217391/76dde5c9-5bc3-495f-8121-8236a0eb03b7)
