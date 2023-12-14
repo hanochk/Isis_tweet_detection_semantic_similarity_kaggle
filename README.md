@@ -71,7 +71,9 @@ Despite the noisy tokens, the model can generalize well and the cleaning of the 
  - Assess early stopping supporting implicit regularization by averaging over the folds
  -- A nested CV for randomizing new test-set each time is also an option
  - For assessing the final model performance, a good practice is to train 3 models, over the entire training-set, with different seeds and averages over the test-set AP.
- - Few of the tweets are in Arabic hence better to consider another multi-lingual model such as “distiluse-base-multilingual-cased-v1”
+ - Few of the tweets are in Arabic hence:
+ -  Considering another multi-lingual model such as “distiluse-base-multilingual-cased-v1”
+ -  Translating to English by language translator, with the expense of non-accuracy of the translation
  - Using the place information as a prior, by a place recognition model, out of the cities/countries list and attributing to a terror act
  - Further optimizing hyperparameters(learning rates, weights decay, dropout, …) and architecture structure (more layers, different activation functions,..)
  - using the username as a prior, though it is indicative for that set, can be overfitting and will be hard to generalize to unseen tweets
