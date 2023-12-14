@@ -12,10 +12,9 @@ Dataset: https://www.kaggle.com/datasets/fifthtribe/how-isis-uses-twitter
 **Classifying ISIS tweets as pro-Isis 
 
 A few approaches could be considered: 
-Probabilistic model (GMM for instance) based on the clustered embeddings representation (created by SBERT) of each tweet for each class and assessing the hypothesis that a tweet belongs to one of the probabilistic models P(t/model_isis) > P(t/model_non_isis).
-Semantically sentence similarity-based model that creates representation in high dimension feeding a nonlinear binary classifier (MLP), based on the SBERT embeddings, for instance. SBERT can be a good candidate since it was trained contrastively to maintain similarity between sentences with “similar meaning”. Since the embeddings aren’t necessarily linearly separable in the latent space, an additional MLP-based classifier containing non-linear elements as well, is added. 
-Generative-based approach with LLM containing a large context window that can have in-context learning-based prompt with many tweet examples, assessing if a  given tweet from the test set is an Isis based. However, generating confidence needs to be addressed. 
-
+ - Probabilistic model (GMM for instance) based on the clustered embeddings representation (created by SBERT) of each tweet for each class and assessing the hypothesis that a tweet belongs to one of the probabilistic models P(t/model_isis) > P(t/model_non_isis).
+ - Semantically sentence similarity-based model that creates representation in high dimension feeding a nonlinear binary classifier (MLP), based on the SBERT embeddings, for instance. SBERT can be a good candidate since it was trained contrastively to maintain similarity between sentences with “similar meaning”. Since the embeddings aren’t necessarily linearly separable in the latent space, an additional MLP-based classifier containing non-linear elements is added. 
+  - Generative-based approach and retrieval one, are also an option
 Approach No.2 was adopted here.
 
 A textual similarity model such as SBERT (Bi-Encoder) was trained to get maximal cosine similarity for semantic similar sentences and also used for clustering purposes. 
