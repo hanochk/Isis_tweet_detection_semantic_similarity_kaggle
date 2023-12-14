@@ -9,7 +9,7 @@ For running the prediction process, based on the precomputed embeddings, set: pr
 
 Dataset: https://www.kaggle.com/datasets/fifthtribe/how-isis-uses-twitter
 
-**Classifying ISIS tweets as pro-Isis 
+## Classifying ISIS tweets as pro-Isis 
 
 A few approaches could be considered: 
  - Probabilistic model (GMM for instance) based on the clustered embeddings representation (created by SBERT) of each tweet for each class and assessing the hypothesis that a tweet belongs to one of the probabilistic models P(t/model_isis) > P(t/model_non_isis).
@@ -18,10 +18,9 @@ A few approaches could be considered:
 Approach No.2 was adopted here since it is fully trainable using the SBERT model as a pre-trained backbone. 
 
 A textual similarity model such as SBERT (Bi-Encoder) was trained to get maximal cosine similarity for semantic similar sentences and also used for clustering purposes. 
-
 Disclaimer: many SBERT models are under various challenges such as MTEB one. Hence picking the right model is also an issue to be further optimized.
 
-I've chosen one of the top models, mostly used, in the leaderboard, all-MiniLM-L6-v2, which can be used for tasks like clustering or semantic search and yields an embedding size of 384. it is 5 times faster and still offers good quality and very popular.
+I've chosen one of the top models, mostly used, in the leaderboard, all-MiniLM-L6-v2, which can be used for tasks like clustering or semantic search and yields an embedding size of 384. it is 5 times faster and still offers good quality and is very popular.
 
 It supports a sequence length of 256 tokens (WordPiece) which is equivalent to ~160 words. It doesn’t necessarily tell that the meaning is similar among ISIS tweets hence the contextualized, SBERT, embeddings aren’t supposed to be separable.
 
@@ -30,17 +29,17 @@ SBERT models are trained under text clustering (MTEB) challenges (based on weakl
 Data sets of Isis tweets have 17410 entries with a maximal length of tweet is 160, which is supported by the SBERT model chosen. For larger tweets, a different model should be considered or a different way of handling them.
 
 
-**Data handling and EDA
+## Data handling and EDA
 
-***Data split
+### Data split
 Split data to test set (10%) and the remaining to train/cross-validation(CV). CV for optimizing hyperparameters and architecture structure. K-fold CV of 5-folds was taken creating 20%/80% split between train and validation. Training the final model based on all the data is a good practice (Todo).
 The train/val/test split was stratified by the username as I found that each username has its way of expressing and hence avoiding leakage. Essentially, a username as a feature isn’t good practice for generalization, though it prejudge the username for good.
 
-***Data skewness
+### Data skewness
 Positive class is the minority: positive has the support of 17410 while negative has 123343, which reflects real-life situations. therefore the best way is to measure AP (precision-recall curve) where the Precision will reflect the majority misclassified as positive (minority class). Further balancing the batch by resampling with replacement of the minority (WeightedRandomSampler())
 
 
-***Preprocessing
+### Preprocessing
 
 Processing by removing noninformative emojis (deEmojify()) and converting/ removing abbreviations  (removes OMG and LOL ). A further processing should be taken w/ should be converted further to “with”
 
@@ -56,14 +55,14 @@ Short tweets like 'R08o/s/q8SJ' or ‘his’ or 'A B' could be noisy and non-inf
 
 Despite the noisy tokens, the model can generalize well and the cleaning of the noise could be bootstraped by observing the maximal loss-based examples over the training set. It should be demonstrated, however. 
 
-**Discussion, limitations and further recommendations
+## Discussion, limitations and further recommendations
 
 - Training over 8 epochs over the 5 folds and evaluating over the test-set was taken
 - AP over validation was averaged over the folds to get AP=90%. It was translated to a test set (AP=96%) for examining generalization
 - Results are high and can stem from the fact that the test-set isn't too representative (discussed later)
 - The learning curve shows signs of near overfitting which can tell that stratification was over the right attribute, other-wise the training and validation set would have been correlated
 - 
-***Actions to explore further given more time
+### Actions to explore further given more time
  - Determine the right threshold for the classifier, trading off precision/recall or FN/FP implicitly. We can see that the threshold is nearly the same over the validation and test set.   
  - Error analysis for understanding upon what examples the model failed to predict, extracting noisy tweets. 
  - Time precedence of the tweets wasn't examined 
