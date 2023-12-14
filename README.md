@@ -1,13 +1,13 @@
-# Isis_tweet_detection
+# Isis tweet detection - A new approach by contextualized sentence representation
 Setup: 
 install requirements.txt 
 
-First precompute embeddings by setting 
+First, precompute embeddings by setting 
 pre_compute_embeddings = True 
 
 For running the prediction process, based on the precomputed embeddings, set: pre_compute_embeddings = False
 
-Dataset : https://www.kaggle.com/datasets/fifthtribe/how-isis-uses-twitter
+Dataset: https://www.kaggle.com/datasets/fifthtribe/how-isis-uses-twitter
 
 **Classifying ISIS tweets as pro-Isis 
 
