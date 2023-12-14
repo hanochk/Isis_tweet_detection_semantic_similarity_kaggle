@@ -1,27 +1,19 @@
 import sys
 
 import os
-from scipy.optimize import linear_sum_assignment
 import pickle
 import matplotlib
 matplotlib.use('TkAgg')
 # matplotlib.use('qtagg')
 import matplotlib.pyplot as plt
 import re
-import copy
 
-import numpy as np
-import torch
-import tqdm
 # np.seterr(all='raise')
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 import pandas as pd
-import emoji
-# from abbrev_dict import *
-# from eval_metrices import roc_plot, p_r_plot
-from data import *
+
 from models import *
 from train_eval import *
 from eval_metrices import p_r_plot
@@ -30,6 +22,15 @@ def flatten(lst):
 
 def cosine_sim(x, y):
     return np.dot(x, y) / (np.linalg.norm(x)*np.linalg.norm(y))
+
+from sklearn.manifold import TSNE
+
+def plot_tsne(all_targets, all_features, path, n_components=2, perplexity=30):
+    tsne_data = TSNE(n_components=n_components, perplexity=perplexity).fit_transform(all_features)
+    tsne_data.shape
+    plt.scatter(tsne_data[:, 0], tsne_data[:, 1], c=all_targets, s=1)
+    plt.title("TSNE of classes {} N={} p={}".format(np.unique(all_targets), all_targets.shape[0], perplexity))
+    plt.savefig(os.path.join(path, 'tsne_' 'p_' + str(perplexity) + '.png'))
 
 class SimilarityManager:
     def __init__(self, device):
@@ -156,7 +157,10 @@ def main():
         key_tag = 'rand_neg_embed'
         with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'rb') as f:
             all_embeds_neg = pickle.load(f)
-
+    if 1:
+        plot_tsne(all_targets=np.concatenate([np.ones((1, len(all_embeds_pos))),
+                  np.zeros((1, len(all_embeds_neg)))], axis=1),
+                  all_features=np.concatenate([all_embeds_pos, all_embeds_neg]), path=result_dir)
     # Optimizer
     loss = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=1e-5,
@@ -228,7 +232,7 @@ def main():
 
         all_val_total_loss = list()
         all_train_total_loss = list()
-        for epochs in range(6):
+        for epochs in range(16):
             all_targets, all_predictions, train_total_loss = train_model(model, train_dataloader,
                                                        criterion=loss, optimizer=optimizer, device=device, num_epochs=1)
 
@@ -256,14 +260,14 @@ def main():
         all_targets_test, all_predictions_test, test_total_loss = eval_model(model, test_dataloader,
                                                                        criterion=loss, optimizer=optimizer,
                                                                        device=device)
-
-        p_r_plot(all_targets_test, all_predictions_test[:, 1], positive_label=1, save_dir=result_dir,
-                        unique_id='Isis tweets classifier test-set ')
-
+        print('Validation set AP : ')
         p_r_plot(all_targets_val, all_predictions_val[:, 1], positive_label=1, save_dir=result_dir,
-                        unique_id='Isis tweets classifier validation-set ')
+                        unique_id='Isis tweets classifier validation-set fold ' + str(fold_ix))
 
-        torch.save(model.state_dict(), os.path.join(bin_dir, 'model'))
+    print('Test set AP : ')
+    p_r_plot(all_targets_test, all_predictions_test[:, 1], positive_label=1, save_dir=result_dir,
+                    unique_id='Isis tweets classifier test-set ')
+    torch.save(model.state_dict(), os.path.join(bin_dir, 'model'))
 
     pass
 
