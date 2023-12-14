@@ -7,6 +7,8 @@ pre_compute_embeddings = True
 
 For running the prediction process, based on the precomputed embeddings, set: pre_compute_embeddings = False
 
+Dataset : https://www.kaggle.com/datasets/fifthtribe/how-isis-uses-twitter
+
 **Classifying ISIS tweets as pro-Isis 
 
 A few approaches could be considered: 
@@ -55,25 +57,32 @@ Short tweets like 'R08o/s/q8SJ' or ‘his’ or 'A B' could be noisy and non-inf
 
 Despite the noisy tokens, the model can generalize well and the cleaning of the noise could be bootstraped by observing the maximal loss-based examples over the training set. It should be demonstrated, however. 
 
+**Discussion, limitations and further recommendations
 
-**Discussion and limitations
-
-- AP over validation was averaged over the folds (AP=90%) and was translated to a test set for examining generalization
-
+- Training over 8 epochs over the 5 folds and evaluating over the test-set was taken
+- AP over validation was averaged over the folds to get AP=90%. It was translated to a test set (AP=96%) for examining generalization
+- Results are high and can stem from the fact that the test-set isn't too representative (discussed later)
+- The learning curve shows signs of near overfitting which can tell that stratification was over the right attribute, other-wise the training and validation set would have been correlated
+- 
 ***Actions to explore further given more time
- - Referring to the time sequence of the tweets
+ - Error analysis for understanding upon what examples the model failed to predict, extracting noisy tweets. 
+ - Time precedence of the tweets wasn't examined 
  - Assess early stopping supporting implicit regularization by averaging over the folds
  -- A nested CV for randomizing new test-set each time is also an option
- - For having more better model performance estimation we need to train 3 models with different seeds and average over the test performance 
+ - For assessing the final model performance, a good practice is to train 3 models, over the entire training-set, with different seeds and averages over the test-set AP.
  - Few of the tweets are in Arabic hence better to consider another multi-lingual model such as “distiluse-base-multilingual-cased-v1”
- - Places recognition out of the cities/countries list and attributing to a terror act
+ - Using the place information as a prior, by a place recognition model, out of the cities/countries list and attributing to a terror act
  - Further optimizing hyperparameters(learning rates, weights decay, dropout, …) and architecture structure (more layers, different activation functions,..)
- - Building a  classifier based on the username, though it is indicative for that set it is an overfitting and will be hard to generalize to unseen tweets
+ - using the username as a prior, though it is indicative for that set, can be overfitting and will be hard to generalize to unseen tweets
  - Validate if the existence of web links, and short tweets inside the tweets improves the KPI or not
 Further processing should be taken over abbreviations such as “w/” should be converted further to “with”
- - Examine the generalization vs. a holdout set such as tweets from later in time, a year or two after the terror attack in Paris
+ - Examine the generalization vs. a holdout set such as tweets from later periods: a year or two after the terror attack in Paris
  - Consider Incorporating N-gram based approach or NER to gain more confidence by Identifying more frequently or names of prominent clergy:  "Anwar Awlaki", "Ahmad Jibril", "Ibn Taymiyyah", "Abdul Wahhab". Examples of clergy that they hate the most: "Hamza Yusuf", "Suhaib Webb", "Yaser Qadhi", "Nouman Ali Khan", "Yaqoubi".
 
+![learning_curve_fold_0_](https://github.com/hanochk/Isis_tweet_detection/assets/8217391/f19d44f1-8659-42cf-a46f-1d4cf270cbe4)
 
+![learning_curve_fold_1_](https://github.com/hanochk/Isis_tweet_detection/assets/8217391/e1a10e0d-6f98-4b6e-a4fd-4b1724e6c9e3)
+
+![Isis tweets classifier validation-set fold 0p_r_curve](https://github.com/hanochk/Isis_tweet_detection/assets/8217391/f0441141-af1a-4c69-ac48-db7e71a96279)
 
 
