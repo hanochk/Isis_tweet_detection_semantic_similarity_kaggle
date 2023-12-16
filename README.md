@@ -41,15 +41,21 @@ Positive class is the minority: positive has the support of 17410 while negative
 
 ### Preprocessing
 
-Processing by removing noninformative emojis (deEmojify()) and converting/ removing abbreviations  (removes OMG and LOL ). A further processing should be taken w/ should be converted further to “with”
+Removing special characters like newline, slash, and backsplash, converting text to lowercase.
+Removing (deEmojify()) noninformative emojis (emoticons, symbols & pictographs,..). Further processing should be taken over abbreviations such as "w/" that should be converted further to “with”
 
 The description field isn’t supported all the time and further thoughts should be carried how to exploit it
 
 Misc symbols
 Keywords:  @War_Reports 
 Hashtags:  #Aleppo
-www links such as: https://t.co/y1WWfRJdTp/s/AqAU  most don’t exist anymore hence it may not generalize well based on that.
-Tokens like \ud83d\ude34 appear in the random tweets
+
+### URLs shortcuts (Bit.ly):
+Few leads to radical Islamic ones https://t.co/QcKBdeCdty : “ ADVICE OF RASOOLULLAH (S.A.W) TO THE MUJAHIDEEN IN THE PATH OF ALLAH
+Few lead to tweet address http://t.co/SUDbVtQtTG 
+Few like : http://t.co/YIcnGMVjiX, http://t.co/qvErFO25Qj were removed hence it may not generalize well
+Scrapping the URLs can lead to a better understanding what is the content behind for generalization of unseen tweets that will contain different URLs than these
+I’ve started by treating them as regular English tokens, which means finding similar ones will increase the similarity to seen tweets contextualized embeddings. 
 
 Short tweets like 'R08o/s/q8SJ' or ‘his’ or 'A B' could be noisy and non-informative but maybe a coded message  between Isis fanboys 
 
