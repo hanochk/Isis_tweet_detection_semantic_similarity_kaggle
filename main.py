@@ -106,6 +106,29 @@ def deEmojify(text):
     return regrex_pattern.sub(r'',text)
 
 
+def deEmojify2(text):
+    regrex_pattern = re.compile(pattern = "["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        u"\U00002500-\U00002BEF"  # chinese char
+        u"\U00002702-\U000027B0"
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+        u"\U0001f926-\U0001f937"
+        u"\U00010000-\U0010ffff"
+        u"\u2640-\u2642"
+        u"\u2600-\u2B55"
+        u"\u200d"
+        u"\u23cf"
+        u"\u23e9"
+        u"\u231a"
+        u"\ufe0f"  # dingbats
+        u"\u3030"
+                           "]+", flags = re.UNICODE)
+    return regrex_pattern.sub(r'', text)
+
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     batch_size = 16
@@ -157,10 +180,12 @@ def main():
         key_tag = 'rand_neg_embed'
         with open(os.path.join(bin_dir, str(key_tag) + '.pkl'), 'rb') as f:
             all_embeds_neg = pickle.load(f)
-    if 1:
+    if 0:
         plot_tsne(all_targets=np.concatenate([np.ones((1, len(all_embeds_pos))),
                   np.zeros((1, len(all_embeds_neg)))], axis=1),
-                  all_features=np.concatenate([all_embeds_pos, all_embeds_neg]), path=result_dir)
+                  all_features=np.concatenate([all_embeds_pos, all_embeds_neg]),
+                  perplexity=50,
+                  path=result_dir)
     # Optimizer
     loss = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=1e-5,
