@@ -64,7 +64,7 @@ Despite the noisy tokens, the model can generalize well and the cleaning of the 
 ## Discussion, limitations and further recommendations
 
 - Training over 8 epochs over the 5 folds and evaluating over the test-set was taken
-- AP over validation was averaged over the folds to get AP=90%. It was translated to a test set (AP=96%) for examining generalization
+- AP over validation was averaged over the folds to get AP=90%. It was translated to a test set (AP=96%) for examining generalization. The additional 6% could result from the difference in the validation/test support and the variance of a single model. Of course, it should be further justified given more time.
 - Results are high and can stem from the fact that the test-set isn't too representative (discussed later)
 - The learning curve shows signs of near overfitting which can tell that stratification was over the right attribute, other-wise the training and validation set would have been correlated
 - 
